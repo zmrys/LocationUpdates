@@ -1,7 +1,9 @@
 package com.jacknephilim.locationupdates
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.location.Location
+import androidx.core.app.ActivityCompat
 import androidx.preference.PreferenceManager
 import java.text.DateFormat
 import java.util.*
@@ -46,6 +48,10 @@ object Utils {
             R.string.location_updated,
             DateFormat.getDateTimeInstance().format(Date())
         )
+    }
+
+    fun hasPermissions(context: Context, vararg permissions: String): Boolean = permissions.all {
+        ActivityCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
     }
 
 }

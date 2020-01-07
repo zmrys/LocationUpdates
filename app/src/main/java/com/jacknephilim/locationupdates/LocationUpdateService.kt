@@ -186,10 +186,11 @@ class LocationUpdateService : Service() {
         // Notify anyone listening for broadcasts about the new location.
         val intent = Intent(ACTION_BROADCAST)
         intent.putExtra(EXTRA_LOCATION, l)
-        LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
         // Update notification content if running as a foreground service.
         if (serviceIsRunningInForeground()) {
-            notificationManager?.notify(NOTIFICATION_ID, getNotification())
+            EzNotification(this,getNotificationData()).show(NOTIFICATION_ID)
+            //notificationManager?.notify(NOTIFICATION_ID, getNotification())
         }
     }
 
@@ -224,6 +225,37 @@ class LocationUpdateService : Service() {
         return EzNotification(this, data).getNotification()
     }
 
+    private fun getNotificationData(): EzNotificationData {
+        val text = Utils.getLocationText(location)
+        val intent = createIntent(LocationUpdateService::class.java).apply {
+            putExtra(EXTRA_STARTED_FROM_NOTIFICATION, true)
+        }
+        val serviceIntent = servicePendingIntent(intent, PendingIntent.FLAG_UPDATE_CURRENT)
+        val activityIntent = activityPendingIntent(MainActivity::class.java, 0)
+
+        val data = EzNotificationData(
+            channelId = CHANNEL_ID,
+            title = Utils.getLocationTitle(this)!!,
+            text = text!!,
+            smallIcon = R.mipmap.ic_launcher,
+            onActivityAction = NotificationAction(
+                R.mipmap.ic_launcher,
+                getString(R.string.launch_activity),
+                activityIntent
+            ),
+            onServiceAction = NotificationAction(
+                R.drawable.ic_cancel_24dp,
+                getString(R.string.remove_location_updates),
+                serviceIntent
+            ),
+            ongoing = true,
+            priority = Notification.PRIORITY_HIGH,
+            ticker = text,
+            setWhen = System.currentTimeMillis()
+        )
+        return data
+    }
+
     private fun serviceIsRunningInForeground(): Boolean {
         val manager = this.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         for (service in manager.getRunningServices(Int.MAX_VALUE)) {
@@ -240,7 +272,7 @@ class LocationUpdateService : Service() {
      * Removes location updates. Note that in this sample we merely log the
      * {@link SecurityException}.
      */
-    public fun removeLocationUpdates() {
+    fun removeLocationUpdates() {
         Log.i(TAG, "Removing location updates")
         try {
             fusedLocationClient?.removeLocationUpdates(locationCallback)
@@ -255,7 +287,7 @@ class LocationUpdateService : Service() {
      * Makes a request for location updates. Note that in this sample we merely log the
      * {@link SecurityException}.
      */
-    public fun requestLocationUpdates() {
+    fun requestLocationUpdates() {
         Log.i(TAG, "Requesting location updates")
         Utils.setRequestingLocationUpdates(this, true)
         startService(createIntent(LocationUpdateService::class.java))
